@@ -1,10 +1,13 @@
-use hyper::body::Body;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Method, Request, Response, server::Server, StatusCode};
+use hyper::body::Incoming;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Method, Request, Response, StatusCode};
+use hyper_util::rt::TokioIo;
+use http_body_util::Full;
 use sqlx::postgres::PgPoolOptions;
-use std::convert::Infallible;
 use std::env;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
 // Декларация модулей
 mod controllers;
@@ -46,29 +49,33 @@ async fn main() {
 
     // Настраиваем адрес сервера
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-
-    // Создаём сервис Hyper с маршрутизацией
-    let make_service = make_service_fn(move |_conn| {
-        let pool = pool.clone();
-        async move {
-            Ok::<_, Infallible>(service_fn(move |req| handle_request(req, pool.clone())))
-        }
-    });
+    let listener = TcpListener::bind(addr).await.unwrap();
+    log::info!("Сервер запущен на {}", addr);
 
     // Запускаем сервер
-    let server = Server::bind(&addr).serve(make_service);
-    log::info!("Сервер запущен на {}", addr);
-    if let Err(e) = server.await {
-        log::error!("Ошибка сервера: {}", e);
-        std::process::exit(1);
+    loop {
+        let (stream, _) = listener.accept().await.unwrap();
+        let io = TokioIo::new(stream);
+        let pool_clone = pool.clone();
+
+        tokio::task::spawn(async move {
+            if let Err(err) = http1::Builder::new()
+                .serve_connection(io, service_fn(move |req| {
+                    handle_request(req, pool_clone.clone())
+                }))
+                .await
+            {
+                log::error!("Ошибка обслуживания соединения: {:?}", err);
+            }
+        });
     }
 }
 
 // Обрабатывает входящие запросы и маршрутизирует их
 async fn handle_request(
-    req: Request<Body>,
+    req: Request<Incoming>,
     pool: sqlx::PgPool,
-) -> Result<Response<Body>, hyper::Error> {
+) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
     let path = req.uri().path();
     let method = req.method();
 
@@ -81,7 +88,7 @@ async fn handle_request(
         (&Method::PATCH, "/api/users/me") => auth_middleware(req, pool, update_user).await,
         // Обработка неподдерживаемых маршрутов
         _ => {
-            let mut response = Response::new(Body::from("Not Found"));
+            let mut response = Response::new(Full::new(hyper::body::Bytes::from("Not Found")));
             *response.status_mut() = StatusCode::NOT_FOUND;
             Ok(response)
         }

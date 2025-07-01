@@ -1,4 +1,6 @@
-use hyper::{Body, Request, Response};
+use hyper::body::Incoming;
+use hyper::{Request, Response};
+use http_body_util::Full;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use sqlx::PgPool;
 use std::env;
@@ -8,13 +10,13 @@ use crate::models::Claims;
 
 // Middleware для проверки JWT-токена
 pub async fn auth_middleware<F, Fut>(
-    mut req: Request<Body>,
+    mut req: Request<Incoming>,
     pool: PgPool,
     handler: F,
-) -> Result<Response<Body>, hyper::Error>
+) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error>
 where
-    F: Fn(Request<Body>, PgPool) -> Fut + Send + Sync + 'static,
-    Fut: std::future::Future<Output = Result<Response<Body>, hyper::Error>> + Send,
+    F: Fn(Request<Incoming>, PgPool) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = Result<Response<Full<hyper::body::Bytes>>, hyper::Error>> + Send,
 {
     // Извлекаем заголовок X-User-Access-Token
     let token = match req.headers().get("X-User-Access-Token") {

@@ -1,5 +1,5 @@
-use hyper::body::Body;
 use hyper::{Response, StatusCode};
+use http_body_util::Full;
 use thiserror::Error;
 
 // Enum для ошибок приложения
@@ -23,7 +23,7 @@ pub enum AppError {
 
 // Реализация преобразования ошибок в HTTP-ответы Hyper
 impl AppError {
-    pub fn into_response(self) -> Response<Body> {
+    pub fn into_response(self) -> Response<Full<hyper::body::Bytes>> {
         let (status, body) = match self {
             AppError::Unauthorized | AppError::InvalidToken => {
                 (StatusCode::UNAUTHORIZED, "authorization error".to_string())
@@ -36,9 +36,9 @@ impl AppError {
 
         Response::builder()
             .status(status)
-            .body(Body::from(body))
+            .body(Full::new(hyper::body::Bytes::from(body)))
             .unwrap_or_else(|_| {
-                Response::new(Body::from("internal server error"))
+                Response::new(Full::new(hyper::body::Bytes::from("internal server error")))
             })
     }
 }

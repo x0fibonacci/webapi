@@ -19,7 +19,7 @@ pub async fn create_user(user: &User, pool: &PgPool) -> Result<User, AppError> {
     .bind(&user.email)
     .bind(&user.password)
     .bind(user.age)
-    .fetch_one(&mut tx) // Исправлено: используем &mut tx
+    .fetch_one(&mut *tx) // Исправлено: используем &mut *tx
     .await?;
 
     tx.commit().await?;
@@ -52,17 +52,14 @@ pub async fn update_user(
 
     // Формируем динамический SQL-запрос для обновления только указанных полей
     let mut set_clauses = Vec::new();
-    let mut params = Vec::new();
     let mut param_index = 1;
 
-    if let Some(name) = &update_request.name {
+    if update_request.name.is_some() {
         set_clauses.push(format!("name = ${}", param_index));
-        params.push(name as &str);
         param_index += 1;
     }
-    if let Some(age) = update_request.age {
+    if update_request.age.is_some() {
         set_clauses.push(format!("age = ${}", param_index));
-        params.push(age);
         param_index += 1;
     }
 
@@ -75,13 +72,19 @@ pub async fn update_user(
         set_clauses.join(", "),
         param_index
     );
+
+    // Строим запрос с правильной привязкой параметров
     let mut query_builder = sqlx::query_as::<_, User>(&query);
-    for param in params {
-        query_builder = query_builder.bind(param);
+    
+    if let Some(name) = &update_request.name {
+        query_builder = query_builder.bind(name);
+    }
+    if let Some(age) = update_request.age {
+        query_builder = query_builder.bind(age);
     }
     query_builder = query_builder.bind(user_id);
 
-    let user = query_builder.fetch_one(&mut tx).await?; // Исправлено: используем &mut tx
+    let user = query_builder.fetch_one(&mut *tx).await?; // Исправлено: используем &mut *tx
 
     tx.commit().await?;
     Ok(user)
