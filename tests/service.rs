@@ -51,7 +51,9 @@ async fn test_user_service() {
         name: Some("Updated User".to_string()),
         age: Some(30),
     };
-    let updated_user = update_user_service(user.id, update_request, &pool).await.unwrap();
+    let updated_user = update_user_service(user.id, update_request, &pool)
+        .await
+        .unwrap();
     assert_eq!(updated_user.name, "Updated User");
     assert_eq!(updated_user.age, 30);
 

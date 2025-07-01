@@ -1,6 +1,6 @@
+use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
 use hyper::{Request, Response, StatusCode};
-use http_body_util::{BodyExt, Full};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -9,7 +9,10 @@ use crate::models::{LoginRequest, UpdateUserRequest, UserRequest};
 use crate::services::user::{create_user_service, login_service, update_user_service};
 
 // Обработчик для POST /api/users — создание пользователя
-pub async fn create_user(req: Request<Incoming>, pool: PgPool) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
+pub async fn create_user(
+    req: Request<Incoming>,
+    pool: PgPool,
+) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
     // Парсим тело запроса в UserRequest
     let body_bytes = req.collect().await?.to_bytes();
     let user_request: UserRequest = match serde_json::from_slice(&body_bytes) {
@@ -37,7 +40,10 @@ pub async fn create_user(req: Request<Incoming>, pool: PgPool) -> Result<Respons
 }
 
 // Обработчик для POST /api/login — авторизация пользователя
-pub async fn login(req: Request<Incoming>, pool: PgPool) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
+pub async fn login(
+    req: Request<Incoming>,
+    pool: PgPool,
+) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
     // Парсим тело запроса в LoginRequest
     let body_bytes = req.collect().await?.to_bytes();
     let login_request: LoginRequest = match serde_json::from_slice(&body_bytes) {
@@ -62,7 +68,10 @@ pub async fn login(req: Request<Incoming>, pool: PgPool) -> Result<Response<Full
 }
 
 // Обработчик для PATCH /api/users/me — обновление данных пользователя
-pub async fn update_user(req: Request<Incoming>, pool: PgPool) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
+pub async fn update_user(
+    req: Request<Incoming>,
+    pool: PgPool,
+) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error> {
     // Извлекаем user_id из extensions (добавлен middleware)
     let user_id = match req.extensions().get::<uuid::Uuid>() {
         Some(id) => *id,

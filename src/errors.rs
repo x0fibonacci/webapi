@@ -1,5 +1,5 @@
-use hyper::{Response, StatusCode};
 use http_body_util::Full;
+use hyper::{Response, StatusCode};
 use thiserror::Error;
 
 // Enum для ошибок приложения
@@ -29,9 +29,10 @@ impl AppError {
                 (StatusCode::UNAUTHORIZED, "authorization error".to_string())
             }
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::Internal(_) | AppError::Database(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".to_string())
-            }
+            AppError::Internal(_) | AppError::Database(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal server error".to_string(),
+            ),
         };
 
         Response::builder()

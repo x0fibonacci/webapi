@@ -5,16 +5,23 @@ use uuid::Uuid;
 
 use crate::errors::AppError;
 use crate::models::{LoginRequest, UpdateUserRequest, User, UserRequest};
-use crate::repositories::user::{create_user as create_user_repo, find_user_by_email, update_user as update_user_repo};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use crate::repositories::user::{
+    create_user as create_user_repo, find_user_by_email, update_user as update_user_repo,
+};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // Создаёт нового пользователя с хешированным паролем
-pub async fn create_user_service(user_request: UserRequest, pool: &PgPool) -> Result<User, AppError> {
+pub async fn create_user_service(
+    user_request: UserRequest,
+    pool: &PgPool,
+) -> Result<User, AppError> {
     // Проверяем, что пользователь с таким email не существует
     if find_user_by_email(&user_request.email, pool).await.is_ok() {
-        return Err(AppError::BadRequest("Пользователь с таким email уже существует".to_string()));
+        return Err(AppError::BadRequest(
+            "Пользователь с таким email уже существует".to_string(),
+        ));
     }
 
     // Хешируем пароль асинхронно
@@ -64,7 +71,11 @@ pub async fn login_service(login_request: LoginRequest, pool: &PgPool) -> Result
     let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET должен быть задан в .env");
     let claims = crate::models::Claims {
         sub: user.id.to_string(),
-        exp: (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 3600) as i64,
+        exp: (SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 3600) as i64,
     };
     let token = encode(
         &Header::default(),

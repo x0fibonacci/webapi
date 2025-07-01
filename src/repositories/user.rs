@@ -14,7 +14,7 @@ pub async fn create_user(user: &User, pool: &PgPool) -> Result<User, AppError> {
         RETURNING id, name, email, password, age
         "#,
     )
-    .bind(&user.id)
+    .bind(user.id)
     .bind(&user.name)
     .bind(&user.email)
     .bind(&user.password)
@@ -64,7 +64,9 @@ pub async fn update_user(
     }
 
     if set_clauses.is_empty() {
-        return Err(AppError::BadRequest("Нет данных для обновления".to_string()));
+        return Err(AppError::BadRequest(
+            "Нет данных для обновления".to_string(),
+        ));
     }
 
     let query = format!(
@@ -75,7 +77,7 @@ pub async fn update_user(
 
     // Строим запрос с правильной привязкой параметров
     let mut query_builder = sqlx::query_as::<_, User>(&query);
-    
+
     if let Some(name) = &update_request.name {
         query_builder = query_builder.bind(name);
     }

@@ -1,7 +1,7 @@
+use http_body_util::Full;
 use hyper::body::Incoming;
 use hyper::{Request, Response};
-use http_body_util::Full;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 use std::env;
 
@@ -16,7 +16,8 @@ pub async fn auth_middleware<F, Fut>(
 ) -> Result<Response<Full<hyper::body::Bytes>>, hyper::Error>
 where
     F: Fn(Request<Incoming>, PgPool) -> Fut + Send + Sync + 'static,
-    Fut: std::future::Future<Output = Result<Response<Full<hyper::body::Bytes>>, hyper::Error>> + Send,
+    Fut: std::future::Future<Output = Result<Response<Full<hyper::body::Bytes>>, hyper::Error>>
+        + Send,
 {
     // Извлекаем заголовок X-User-Access-Token
     let token = match req.headers().get("X-User-Access-Token") {

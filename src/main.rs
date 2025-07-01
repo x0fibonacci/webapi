@@ -1,9 +1,9 @@
+use http_body_util::Full;
 use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
-use http_body_util::Full;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
@@ -33,8 +33,7 @@ async fn main() {
     }
 
     // Инициализируем пул соединений с PostgreSQL
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL должен быть задан в .env");
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL должен быть задан в .env");
     let pool = match PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
@@ -60,9 +59,10 @@ async fn main() {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(move |req| {
-                    handle_request(req, pool_clone.clone())
-                }))
+                .serve_connection(
+                    io,
+                    service_fn(move |req| handle_request(req, pool_clone.clone())),
+                )
                 .await
             {
                 log::error!("Ошибка обслуживания соединения: {:?}", err);
