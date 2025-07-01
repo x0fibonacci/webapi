@@ -1,0 +1,24 @@
+# Версия Docker Compose
+version: '3.8'
+
+# Определяем сервисы
+services:
+  # Сервис для PostgreSQL
+  postgres:
+    # Используем официальный образ PostgreSQL версии 16
+    image: postgres:16
+    # Переменные окружения для настройки базы данных
+    environment:
+      POSTGRES_USER: user         # Имя пользователя базы данных
+      POSTGRES_PASSWORD: password # Пароль пользователя
+      POSTGRES_DB: user_service   # Имя базы данных
+    # Маппируем порт 5432 контейнера на порт 5432 хоста
+    ports:
+      - "5432:5432"
+    # Настраиваем volume для сохранения данных базы
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Определяем именованный volume для персистентности данных
+volumes:
+  postgres_data:
