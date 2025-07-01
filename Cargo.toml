@@ -1,29 +1,54 @@
 [package]
 name = "webapi"
 version = "0.1.0"
-edition = "2024"
-authors = ["Your Name <your.email@example.com>"]
-description = "REST API for user management with JWT authentication"
+edition = "2021"
+authors = ["mx <mx@example.com>"]
+description = "REST API для управления пользователями с JWT аутентификацией"
 license = "MIT"
-repository = "https://github.com/yourusername/webapi"
+repository = "https://github.com/mx/webapi"
 homepage = "https://yourwebsite.com"
 keywords = ["api", "user", "authentication", "hyper", "sqlx"]
 categories = ["web-programming"]
 
 [dependencies]
-hyper = { version = "1.6.0", features = ["server", "http1"] }
-tokio = { version = "1.40.0", features = ["full"] }
-sqlx = { version = "0.8.2", features = ["runtime-tokio", "postgres", "uuid"] }
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.132"
-jsonwebtoken = "9.3.0"
-sha2 = "0.10.8"
-hmac = "0.12.1"
-dotenv = "0.15.0"
-env_logger = "0.11.5"
-log = "0.4.22"
-uuid = { version = "1.10.0", features = ["v4", "serde"] }
-thiserror = "1.0.64"
-hex = "0.4.3"
-futures-util = "0.3.31"
-anyhow = "1.0.89"
+hyper = { version = "0.14.32", features = ["full", "tcp"] }
+tokio = { version = "1.29", features = ["full"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+jsonwebtoken = "8.3"
+argon2 = "0.5"
+dotenvy = "0.15"
+env_logger = "0.10"
+log = "0.4"
+uuid = { version = "1.4", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+futures-util = "0.3"
+validator = { version = "0.16", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+http = "0.2"
+http-body = "0.4"
+lazy_static = "1.4.0"
+regex = "1.8"
+
+
+[dev-dependencies]
+rstest = "0.18"
+mockall = "0.11"
+assert_matches = "1.5"
+reqwest = { version = "0.11", features = ["json"] }
+fake = { version = "2.6", features = ["derive", "chrono", "uuid"] }
+rand = "0.8"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

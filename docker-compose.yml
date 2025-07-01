@@ -7,18 +7,112 @@ services:
   postgres:
     # Используем официальный образ PostgreSQL версии 16
     image: postgres:16
-    # Переменные окружения для настройки базы данных
+    container_name: webapi-postgres
+    # Политика перезапуска
+    restart: unless-stopped
+    # Переменные окружения (рекомендуется хранить в .env файле)
     environment:
-      POSTGRES_USER: user         # Имя пользователя базы данных
-      POSTGRES_PASSWORD: password # Пароль пользователя
-      POSTGRES_DB: user_service   # Имя базы данных
-    # Маппируем порт 5432 контейнера на порт 5432 хоста
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-user_service}
+      # Оптимизация для разработки
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Настройка локали и кодировки
+      LANG: ru_RU.utf8
+      # Настройки производительности PostgreSQL
+      POSTGRES_INITDB_ARGS: "--data-checksums --encoding=UTF8 --locale=ru_RU.UTF-8"
+    # Маппируем порт базы данных (можно менять внешний порт через .env)
     ports:
-      - "5432:5432"
-    # Настраиваем volume для сохранения данных базы
+      - "${POSTGRES_PORT:-5432}:5432"
+    # Настраиваем volume для данных
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Папка для инициализации БД при первом запуске
+      - ./migrations:/docker-entrypoint-initdb.d
+      # Опционально: кастомная конфигурация postgres
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    # Настройки для улучшения изоляции и безопасности
+    security_opt:
+      - no-new-privileges:true
+    # Проверка работоспособности для Docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-user_service}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Дополнительные параметры
+    command: >
+      postgres
+        -c config_file=/etc/postgresql/postgresql.conf
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c effective_cache_size=512MB
+        -c work_mem=16MB
+        -c maintenance_work_mem=64MB
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c wal_buffers=16MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
 
-# Определяем именованный volume для персистентности данных
+  # Инструмент для администрирования PostgreSQL (опционально)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: webapi-pgadmin
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # Сервис для мониторинга (опционально)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: webapi-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  # Визуализация метрик (опционально)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: webapi-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+# Настройка сетей
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+# Определяем именованные volumes
 volumes:
   postgres_data:
+    name: webapi-postgres-data
+  pgadmin_data:
+    name: webapi-pgadmin-data
+  prometheus_data:
+    name: webapi-prometheus-data
+  grafana_data:
+    name: webapi-grafana-data
